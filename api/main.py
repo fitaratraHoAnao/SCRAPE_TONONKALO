@@ -1,11 +1,12 @@
 import requests
 from bs4 import BeautifulSoup
+import json
 from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-@app.route('/lyrics', methods=['GET'])
-def get_lyrics():
+@app.route('/scrape')
+def scrape():
     # URL de la page à scraper
     url = "https://vetso.serasera.org/tononkalo/aorn/hianoka"
 
@@ -19,21 +20,20 @@ def get_lyrics():
         # Extraire le titre
         title_tag = soup.find('h1')
         title = title_tag.text.strip() if title_tag else "Titre introuvable"
-        
+
         # Extraire les paroles
         lyrics = []
-        # Chercher le div qui contient les paroles
-        lyrics_div = soup.find_all('div', class_='print my-3 fst-italic')[0]  
-        
-        for line in lyrics_div.find_all_next(text=True):
-            # On ajoute uniquement des lignes de texte qui ne sont pas vides
-            if line.strip() and line not in lyrics:
+        lyrics_div = soup.find_all('div', class_='print my-3 fst-italic')[0]
+        for line in lyrics_div.find_next_siblings(text=True):
+            if line.strip():
                 lyrics.append(line.strip())
 
-        # Extraire l'auteur et la date
+        # Extraire l'auteur
         footer = lyrics_div.find_all_next('div')
         author = footer[-1].text.strip() if footer else "Auteur introuvable"
-        date = "03 MAI 2024"  # Date statique
+
+        # Date statique
+        date = "03 MAI 2024"
 
         # Créer le dictionnaire
         data = {
@@ -43,9 +43,10 @@ def get_lyrics():
             "date": date
         }
 
+        # Retourner le résultat en JSON
         return jsonify(data)
     else:
-        return jsonify({"error": f"Erreur lors du scraping : {response.status_code}"}), 500
+        return jsonify({"error": f"Erreur lors du scraping : {response.status_code}"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
