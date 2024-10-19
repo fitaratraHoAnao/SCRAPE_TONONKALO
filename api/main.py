@@ -1,50 +1,48 @@
-from flask import Flask, jsonify, request
 import requests
 from bs4 import BeautifulSoup
+import json
+from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-@app.route('/recherche', methods=['GET'])
-def search_lyrics():
-    tononkalo = request.args.get('tononkalo')
-    author = request.args.get('author')
+@app.route('/')
+def scrape_and_return_json():
+    # URL to scrape
+    url = "https://vetso.serasera.org/tononkalo/aorn/hianoka"
 
-    if not tononkalo or not author:
-        return jsonify({"error": "Veuillez fournir tononkalo et author"}), 400
-
-    url = f"https://vetso.serasera.org/tononkalo/{author}/{tononkalo.lower()}"
+    # Send a GET request to fetch the page
     response = requests.get(url)
+    
+    # Parse the page content
+    soup = BeautifulSoup(response.content, "html.parser")
+    
+    # Extract the poem's title and author
+    title_element = soup.find('h2', class_='border-bottom')
+    title = title_element.get_text(strip=True).replace("(", "").replace(")", "")
 
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.content, 'html.parser')
+    # Extract the poem's content
+    poem = title_element.find_next_sibling(text=True, recursive=False).strip()
 
-        # Extraire le titre
-        title_tag = soup.find('h2')
-        title = title_tag.text.strip() if title_tag else "Titre introuvable"
+    # Extract the rest of the poem by navigating through the sibling elements
+    poem_lines = poem.splitlines()
+    
+    # Additional lines follow under the next <br /> tags, extract them
+    poem_lines += [line.strip() for line in title_element.find_next_siblings(text=True) if line.strip()]
+    
+    # Extract the author's name and date
+    author = soup.find('a', class_='text-decoration-none').get_text(strip=True)
+    date = soup.find(text='03 MAI 2024').strip()
 
-        # Extraire les paroles
-        lyrics_div = soup.find('div', class_='print my-3 fst-italic')
-        lyrics_lines = [line.strip() for line in lyrics_div.stripped_strings]
+    # Prepare data as JSON
+    result = {
+        "title": title,
+        "author": author,
+        "poem": poem_lines,
+        "date": date
+    }
 
-        # Récupérer la date et l'auteur en vérifiant les derniers éléments
-        if len(lyrics_lines) >= 2:
-            date = lyrics_lines[-1]  # Dernier élément
-            author = lyrics_lines[-2]  # Avant-dernier élément
-            lyrics = lyrics_lines[:-2]  # Les autres éléments comme paroles
-        else:
-            return jsonify({"error": "Informations manquantes"}), 404
-
-        # Créer le dictionnaire
-        data = {
-            "title": title,
-            "lyrics": lyrics,
-            "author": author,
-            "date": date
-        }
-
-        return jsonify(data)
-    else:
-        return jsonify({"error": "Erreur lors du scraping"}), response.status_code
+    # Return the JSON response
+    return jsonify(result)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
