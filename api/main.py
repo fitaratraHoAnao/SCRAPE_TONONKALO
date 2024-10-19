@@ -18,26 +18,32 @@ def scrape_and_return_json():
     
     # Extract the poem's title and author
     title_element = soup.find('h2', class_='border-bottom')
-    title = title_element.get_text(strip=True).replace("(", "").replace(")", "")
+    if title_element:
+        title = title_element.get_text(strip=True).replace("(", "").replace(")", "")
+    else:
+        title = "Title not found"
 
     # Extract the poem's content
-    poem = title_element.find_next_sibling(text=True, recursive=False).strip()
-
-    # Extract the rest of the poem by navigating through the sibling elements
-    poem_lines = poem.splitlines()
-    
-    # Additional lines follow under the next <br /> tags, extract them
-    poem_lines += [line.strip() for line in title_element.find_next_siblings(text=True) if line.strip()]
+    poem = ""
+    poem_block = title_element.find_next("div")
+    if poem_block:
+        poem = poem_block.get_text(separator="\n", strip=True)
     
     # Extract the author's name and date
-    author = soup.find('a', class_='text-decoration-none').get_text(strip=True)
-    date = soup.find(text='03 MAI 2024').strip()
+    author_element = soup.find('a', class_='text-decoration-none')
+    if author_element:
+        author = author_element.get_text(strip=True)
+    else:
+        author = "Author not found"
+
+    date_element = soup.find(text='03 MAI 2024')
+    date = date_element.strip() if date_element else "Date not found"
 
     # Prepare data as JSON
     result = {
         "title": title,
         "author": author,
-        "poem": poem_lines,
+        "poem": poem.splitlines(),
         "date": date
     }
 
