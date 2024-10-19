@@ -1,54 +1,53 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-from flask import Flask, jsonify
 
-app = Flask(__name__)
+# URL de la page à scraper
+url = 'https://vetso.serasera.org/tononkalo/aorn/hianoka'
 
-@app.route('/')
-def scrape_and_return_json():
-    # URL to scrape
-    url = "https://vetso.serasera.org/tononkalo/aorn/hianoka"
+# Envoyer une requête HTTP pour obtenir le contenu de la page
+response = requests.get(url)
+soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Send a GET request to fetch the page
-    response = requests.get(url)
-    
-    # Parse the page content
-    soup = BeautifulSoup(response.content, "html.parser")
-    
-    # Extract the poem's title and author
-    title_element = soup.find('h2', class_='border-bottom')
-    if title_element:
-        title = title_element.get_text(strip=True).replace("(", "").replace(")", "")
-    else:
-        title = "Title not found"
+# Scraper le titre
+titre = soup.find('h2').text.strip()
 
-    # Extract the poem's content
-    poem = ""
-    poem_block = title_element.find_next("div")
-    if poem_block:
-        poem = poem_block.get_text(separator="\n", strip=True)
-    
-    # Extract the author's name and date
-    author_element = soup.find('a', class_='text-decoration-none')
-    if author_element:
-        author = author_element.get_text(strip=True)
-    else:
-        author = "Author not found"
+# Scraper l'auteur
+auteur_tag = soup.find('a', href=lambda href: href and 'mpanoratra' in href)
+auteur = auteur_tag.text.strip() if auteur_tag else "Inconnu"
 
-    date_element = soup.find(text='03 MAI 2024')
-    date = date_element.strip() if date_element else "Date not found"
+# Scraper la date (dans ce cas, la date est dans la dernière ligne du poème)
+contenu_div = soup.find('div', class_='col-md-8')
+lines = contenu_div.get_text().splitlines()
 
-    # Prepare data as JSON
-    result = {
-        "title": title,
-        "author": author,
-        "poem": poem.splitlines(),
-        "date": date
-    }
+# Récupérer les lignes non vides (correspondant aux strophes)
+contenu_poeme = [line.strip() for line in lines if line.strip()]
+date = contenu_poeme[-1]  # La date semble être à la fin du poème
 
-    # Return the JSON response
-    return jsonify(result)
+# Diviser le contenu en strophes
+strophes = []
+current_strophe = []
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+for line in contenu_poeme:
+    if line.startswith("Hianoka") and current_strophe:  # nouvelle strophe
+        strophes.append(current_strophe)
+        current_strophe = []
+    current_strophe.append(line)
+
+# Ajouter la dernière strophe
+if current_strophe:
+    strophes.append(current_strophe)
+
+# Construire le dictionnaire du poème
+poeme_dict = {
+    "titre": titre,
+    "auteur": auteur,
+    "date": date,
+    "contenu": [{"strophe": i+1, "texte": strophe} for i, strophe in enumerate(strophes)]
+}
+
+# Convertir le dictionnaire en JSON
+poeme_json = json.dumps(poeme_dict, indent=4, ensure_ascii=False)
+
+# Afficher le JSON
+print(poeme_json)
