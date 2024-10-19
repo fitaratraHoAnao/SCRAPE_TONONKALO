@@ -8,7 +8,7 @@ app = Flask(__name__)
 def search_lyrics():
     tononkalo = request.args.get('tononkalo')
     author = request.args.get('author')
-    
+
     if not tononkalo or not author:
         return jsonify({"error": "Veuillez fournir tononkalo et author"}), 400
 
@@ -24,20 +24,20 @@ def search_lyrics():
 
         # Extraire les paroles
         lyrics_div = soup.find('div', class_='print my-3 fst-italic')
-        lyrics = [line.strip() for line in lyrics_div.find_all_next(string=True) if line.strip() and line != "--------"]
+        lyrics_lines = [line.strip() for line in lyrics_div.stripped_strings]
 
-        # Extraire l'auteur et la date à partir du texte
-        author_date_div = lyrics_div.find_next_sibling(text=True).strip().split('<br />')
-        lyrics += [line.strip() for line in author_date_div if line.strip()]
-
-        # Extraire l'auteur et la date
-        date = lyrics[-1] if lyrics else "Date introuvable"
-        author = lyrics[-2] if len(lyrics) > 1 else "Auteur introuvable"
+        # Récupérer la date et l'auteur en vérifiant les derniers éléments
+        if len(lyrics_lines) >= 2:
+            date = lyrics_lines[-1]  # Dernier élément
+            author = lyrics_lines[-2]  # Avant-dernier élément
+            lyrics = lyrics_lines[:-2]  # Les autres éléments comme paroles
+        else:
+            return jsonify({"error": "Informations manquantes"}), 404
 
         # Créer le dictionnaire
         data = {
             "title": title,
-            "lyrics": lyrics[:-2],  # Exclure l'auteur et la date des paroles
+            "lyrics": lyrics,
             "author": author,
             "date": date
         }
