@@ -1,12 +1,18 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import requests
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-@app.route('/lyrics', methods=['GET'])
-def get_lyrics():
-    url = "https://vetso.serasera.org/tononkalo/aorn/hianoka"
+@app.route('/recherche', methods=['GET'])
+def search_lyrics():
+    tononkalo = request.args.get('tononkalo')
+    author = request.args.get('author')
+    
+    if not tononkalo or not author:
+        return jsonify({"error": "Veuillez fournir tononkalo et author"}), 400
+
+    url = f"https://vetso.serasera.org/tononkalo/{author}/{tononkalo.lower()}"
     response = requests.get(url)
 
     if response.status_code == 200:
@@ -17,22 +23,21 @@ def get_lyrics():
         title = title_tag.text.strip() if title_tag else "Titre introuvable"
 
         # Extraire les paroles
-        lyrics_div = soup.find_all('div', class_='print my-3 fst-italic')[0]
-        lyrics = [line.strip() for line in lyrics_div.find_all_next(string=True) if line.strip()]
+        lyrics_div = soup.find('div', class_='print my-3 fst-italic')
+        lyrics = [line.strip() for line in lyrics_div.find_all_next(string=True) if line.strip() and line != "--------"]
 
-        # Limiter les paroles aux lignes souhaitées
-        filtered_lyrics = lyrics[:15]  # Ajustez le nombre de lignes selon vos besoins
-        
-        # Auteur
-        author = "AORN"  # Vous pouvez aussi l'extraire dynamiquement si nécessaire
-        
-        # Date
-        date = "03 MAI 2024"
+        # Extraire l'auteur et la date à partir du texte
+        author_date_div = lyrics_div.find_next_sibling(text=True).strip().split('<br />')
+        lyrics += [line.strip() for line in author_date_div if line.strip()]
+
+        # Extraire l'auteur et la date
+        date = lyrics[-1] if lyrics else "Date introuvable"
+        author = lyrics[-2] if len(lyrics) > 1 else "Auteur introuvable"
 
         # Créer le dictionnaire
         data = {
-            "title": title,  # Utiliser le titre extrait
-            "lyrics": filtered_lyrics,
+            "title": title,
+            "lyrics": lyrics[:-2],  # Exclure l'auteur et la date des paroles
             "author": author,
             "date": date
         }
