@@ -13,9 +13,9 @@ def get_lyrics():
         soup = BeautifulSoup(response.content, 'html.parser')
 
         # Extraire le titre
-        title_tag = soup.find('h1')
+        title_tag = soup.find('h2')
         title = title_tag.text.strip() if title_tag else "Titre introuvable"
-        
+
         # Extraire les paroles
         lyrics_div = soup.find_all('div', class_='print my-3 fst-italic')[0]
         lyrics = [line.strip() for line in lyrics_div.find_all_next(string=True) if line.strip()]
@@ -24,15 +24,15 @@ def get_lyrics():
         filtered_lyrics = lyrics[:15]  # Ajustez le nombre de lignes selon vos besoins
         
         # Auteur
-        author = "AORN"  # Utiliser une valeur statique ici, ou extraire dynamiquement si disponible
+        author = "AORN"  # Vous pouvez aussi l'extraire dynamiquement si nécessaire
         
-        # Date statique
+        # Date
         date = "03 MAI 2024"
 
         # Créer le dictionnaire
         data = {
-            "title": title,
-            "lyrics": filtered_lyrics,  # Utiliser les paroles filtrées
+            "title": title,  # Utiliser le titre extrait
+            "lyrics": filtered_lyrics,
             "author": author,
             "date": date
         }
