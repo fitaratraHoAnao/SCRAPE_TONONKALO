@@ -18,14 +18,19 @@ if response.status_code == 200:
     
     # Extraire les paroles
     lyrics = []
-    lyrics_div = soup.find('div', class_='print my-3 fst-italic')  # Correction de la recherche
-    if lyrics_div:
-        # Obtenir le texte brut en enlevant les balises HTML
-        lyrics_text = lyrics_div.find_next_sibling(text=True).strip()
-        lyrics = [line.strip() for line in lyrics_text.split('\n') if line.strip()]  # Nettoyage des lignes
+    # Chercher le div qui contient les paroles
+    lyrics_div = soup.find_all('div', class_='print my-3 fst-italic')[0]  # Correction ici
+    lyrics_text = lyrics_div.find_next_sibling(text=True).strip()
+
+    # Maintenant, on doit ajouter une extraction plus robuste
+    # Vérifiez si les paroles sont dans un autre div ou span
+    for line in lyrics_div.find_all_next(text=True):
+        # On ajoute uniquement des lignes de texte qui ne sont pas vides
+        if line.strip() and line not in lyrics:
+            lyrics.append(line.strip())
 
     # Extraire l'auteur et la date
-    footer = lyrics_div.find_next('div').find_all('div')
+    footer = lyrics_div.find_all_next('div')
     author = footer[-1].text.strip() if footer else "Auteur introuvable"
     date = "03 MAI 2024"  # Date statique
 
