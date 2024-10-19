@@ -17,11 +17,13 @@ def get_lyrics():
         title = title_tag.text.strip() if title_tag else "Titre introuvable"
         
         # Extraire les paroles
-        lyrics_div = soup.find_all('div', class_='print my-3 fst-italic')[0]  # Correction ici
-        lyrics = [line.strip() for line in lyrics_div.find_all_next(text=True) if line.strip()]
+        lyrics_div = soup.find_all('div', class_='print my-3 fst-italic')[0]
+        lyrics = [line.strip() for line in lyrics_div.find_all_next(string=True) if line.strip()]
+
+        # Limiter les paroles aux lignes souhaitées
+        filtered_lyrics = lyrics[:15]  # Ajustez le nombre de lignes selon vos besoins
         
-        # Extraire l'auteur
-        author_tag = soup.find('div', class_='print my-3 fst-italic')
+        # Auteur
         author = "AORN"  # Utiliser une valeur statique ici, ou extraire dynamiquement si disponible
         
         # Date statique
@@ -30,7 +32,7 @@ def get_lyrics():
         # Créer le dictionnaire
         data = {
             "title": title,
-            "lyrics": lyrics,
+            "lyrics": filtered_lyrics,  # Utiliser les paroles filtrées
             "author": author,
             "date": date
         }
